@@ -1,0 +1,115 @@
+--Tạo bảng nhân viên--
+
+CREATE TABLE Nhan_Vien (
+Ma_NV VARCHAR(10) PRIMARY KEY, 
+Ten_NV NVARCHAR(50) NOT NULL, 
+SDT_NV VARCHAR(10),
+Chuc_Vu NVARCHAR(30),
+Ma_QL VARCHAR(10),
+CONSTRAINT QUAN_LY FOREIGN KEY (Ma_QL) REFERENCES Nhan_Vien(Ma_NV)
+);
+
+--Tạo bảng tài khoản--
+
+CREATE TABLE Tai_Khoan (
+    Ten_Dang_Nhap VARCHAR(30) PRIMARY KEY,
+    Mat_Khau VARCHAR(255) NOT NULL,
+    Ma_NV VARCHAR(10) NOT NULL,
+    Vai_Tro NVARCHAR(20) CHECK (Vai_Tro IN ('admin', 'nhan_vien', 'quan_ly')),
+    CONSTRAINT FK_TaiKhoan_NV FOREIGN KEY (Ma_NV) REFERENCES Nhan_Vien(Ma_NV)
+);
+
+--Tạo bảng khách hàng--
+
+CREATE TABLE Khach_Hang (
+Ma_KH VARCHAR(10) PRIMARY KEY,
+Ten_KH NVARCHAR(50) NOT NULL,
+SDT_KH VARCHAR(10),
+Dia_Chi_KH VARCHAR(50)
+);
+
+--Tạo bảng nhà cung cấp--
+
+CREATE TABLE Nha_Cung_Cap (
+Ma_NCC VARCHAR(10) PRIMARY KEY,
+Ten_NCC NVARCHAR(100) NOT NULL,
+SDT_NCC VARCHAR(10),
+Email_NCC VARCHAR(100),
+Dia_Chi_NCC NVARCHAR(100)
+);
+
+--Tạo bảng hàng hoá--
+
+CREATE TABLE Hang_Hoa (
+Ma_HH VARCHAR(10) PRIMARY KEY,
+Ten_HH NVARCHAR(100) NOT NULL,
+Ton_Kho INT DEFAULT 0,
+Gia_Goc INT
+);
+
+--Tạo bảng sách--
+
+CREATE TABLE Sach (
+S_Ma_HH VARCHAR(10) PRIMARY KEY,
+Tac_Gia NVARCHAR(50) NOT NULL,
+The_Loai NVARCHAR(50),
+Ngon_Ngu NVARCHAR(50),
+CONSTRAINT HH_Sach FOREIGN KEY (S_Ma_HH) REFERENCES Hang_Hoa(Ma_HH)
+);
+
+--Tạo bảng văn phòng phẩm--
+CREATE TABLE Van_Phong_Pham (
+VPP_Ma_HH VARCHAR(10) PRIMARY KEY,
+Loai NVARCHAR(50),
+Chat_Lieu NVARCHAR(50),
+CONSTRAINT HH_VPP FOREIGN KEY (VPP_Ma_HH) REFERENCES Hang_Hoa(Ma_HH)
+);
+
+--Tạo bảng hoá đơn bán--
+
+CREATE TABLE Hoa_Don_Ban (
+Ma_HDB VARCHAR(10) PRIMARY KEY,
+T_Tien_Ban INT,
+Ma_NV VARCHAR(10),
+Ma_KH VARCHAR(10),
+Thoi_Gian_Ban DATETIME DEFAULT GETDATE(),
+CONSTRAINT NV_Ban FOREIGN KEY (Ma_NV) REFERENCES Nhan_Vien(Ma_NV),
+CONSTRAINT KH_Mua FOREIGN KEY (Ma_KH) REFERENCES Khach_Hang(Ma_KH)
+);
+
+--tạo bảng chi tiết hoá đơn bán--
+
+CREATE TABLE CT_Hoa_Don_Ban (
+Ma_HDB VARCHAR(10),
+Ma_HH VARCHAR(10),
+So_Luong INT NOT NULL CHECK (So_Luong > 0),
+Gia_Ban INT NOT NULL,
+PRIMARY KEY (Ma_HDB, Ma_HH),
+CONSTRAINT HDB FOREIGN KEY (Ma_HDB) REFERENCES Hoa_Don_Ban(Ma_HDB),
+CONSTRAINT Hang_Ban FOREIGN KEY (Ma_HH) REFERENCES Hang_Hoa(Ma_HH)
+);
+
+--Tạo bảng hoá đơn nhập--
+
+CREATE TABLE Hoa_Don_Nhap (
+Ma_HDN VARCHAR(10) PRIMARY KEY,
+T_Tien_Nhap INT,
+Ma_NV VARCHAR(10),
+Ma_NCC VARCHAR(10),
+Thoi_Gian_Nhap DATETIME DEFAULT GETDATE(),
+CONSTRAINT NV_Nhap FOREIGN KEY (Ma_NV) REFERENCES Nhan_Vien(Ma_NV),
+CONSTRAINT NCC FOREIGN KEY (Ma_NCC) REFERENCES Nha_Cung_cap(Ma_NCC)
+);
+
+--tạo bảng chi tiết hoá đơn nhập--
+
+CREATE TABLE CT_Hoa_Don_Nhap (
+Ma_HDN VARCHAR(10),
+Ma_HH VARCHAR(10),
+So_Luong INT NOT NULL CHECK (So_Luong > 0),
+Gia_Nhap INT NOT NULL,
+PRIMARY KEY (Ma_HDN, Ma_HH),
+CONSTRAINT HDN FOREIGN KEY (Ma_HDN) REFERENCES Hoa_Don_Nhap(Ma_HDN),
+CONSTRAINT Hang_Nhap FOREIGN KEY (Ma_HH) REFERENCES Hang_Hoa(Ma_HH)
+);
+

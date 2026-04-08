@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SyncMart - Quản Lý Hệ Thống</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&subset=vietnamese&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* BỘ MÀU GỐC (LIGHT MODE) */
+        :root {
+            --sidebar-bg: #1E1E2D; 
+            --accent-lime: #D2F565; 
+            --bg-main: #F4F6F9; 
+            --text-dark: #1E1E2D;
+            --text-gray: #A0A0A0;
+            --white: #FFFFFF;
+            --border-color: #F1F5F9;
+            --input-bg: #F8FAFC;
+            --hover-bg: #F8FAFC;
+            --shadow-color: rgba(0,0,0,0.05);
+            
+            /* Bóng mặc định của sidebar và khung login ở Light Mode */
+            --sidebar-shadow-color: var(--shadow-color);
+            --login-box-shadow: 0 15px 35px var(--shadow-color);
+
+            --btn-add-bg: #1E1E2D; 
+            --btn-add-text: #D2F565; 
+            
+            --sidebar-text: #FFFFFF;
+            --menu-text-color: #8C8C9A;
+            --menu-hover-color: #FFFFFF;
+            --menu-hover-bg: rgba(255,255,255,0.05);
+            
+            --menu-active-bg: var(--accent-lime); 
+            --menu-active-text: #1E1E2D; 
+            --menu-active-shadow: inset 0 3px 8px rgba(30, 30, 45, 0.4); 
+        }
+
+        /* BỘ MÀU TỐI (DARK MODE) */
+        body.dark-theme {
+            --bg-main: #0D0D14; 
+            --white: #1A1A24; 
+            --text-dark: #FFFFFF; 
+            --border-color: #2A2A35; 
+            --input-bg: #222230; 
+            --hover-bg: #222230; 
+            --shadow-color: rgba(0,0,0,0.5); 
+            
+            /* Đổi viền bóng Sidebar và Khung Login thành màu xanh lá chuối neon khi ở Dark Mode */
+            --sidebar-shadow-color: rgba(210, 245, 101, 0.4);
+            --login-box-shadow: 0 0 40px rgba(210, 245, 101, 0.4);
+
+            --btn-add-bg: var(--accent-lime); 
+            --btn-add-text: #1E1E2D; 
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; transition: background-color 0.3s, color 0.3s, box-shadow 0.3s; }
+        body { background-color: var(--bg-main); display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+
+        /* ======== LOGIN FORM ======== */
+        .login-container { 
+            background-color: var(--white); 
+            width: 550px; 
+            padding: 70px 50px; 
+            border-radius: 30px; 
+            box-shadow: var(--login-box-shadow); 
+            text-align: center; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 25px; 
+            position: relative;
+        }
+        .login-logo { font-size: 32px; font-weight: 700; color: var(--text-dark); margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 12px; }
+        .login-logo .logo-img { width: 45px; height: 45px; object-fit: contain; }
+        .login-title { color: var(--text-gray); font-size: 14px; margin-bottom: 20px; }
+        
+        .input-group input { width: 100%; padding: 16px 20px; border-radius: 15px; border: 1px solid var(--border-color); background-color: var(--input-bg); color: var(--text-dark); font-size: 15px; outline: none; transition: 0.3s; }
+        .input-group input:focus { border-color: var(--accent-lime); background-color: var(--white); }
+        
+        .btn-login { background-color: var(--accent-lime); color: #1E1E2D; padding: 15px; border: none; border-radius: 15px; font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.3s; margin-top: 10px; }
+        .btn-login:hover { background-color: #c4ec4d; transform: translateY(-2px); }
+
+        /* ======== APP DASHBOARD ======== */
+        .app-container { display: none; width: 100vw; height: 100vh; background-color: var(--bg-main); padding: 20px; box-sizing: border-box; gap: 20px; }
+
+        /* ======== SIDEBAR ======== */
+        .sidebar { width: 260px; background-color: var(--sidebar-bg); border-radius: 24px; color: var(--sidebar-text); display: flex; flex-direction: column; padding: 30px 20px; height: 100%; box-shadow: 0 0 15px var(--sidebar-shadow-color); }
+        .logo { font-size: 22px; font-weight: 700; margin-bottom: 40px; display: flex; align-items: center; gap: 10px; }
+        .logo-img { width: 35px; height: 35px; object-fit: contain; background: transparent; }
+        .nav-menu { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+        
+        .menu-item, .menu-title { padding: 12px 20px; border-radius: 12px; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--menu-text-color); transition: all 0.3s ease; display: flex; justify-content: space-between; align-items: center; }
+        .menu-item:hover, .menu-title:hover { color: var(--menu-hover-color); background-color: var(--menu-hover-bg); }
+        
+        .active { background-color: var(--menu-active-bg) !important; color: var(--menu-active-text) !important; font-weight: 700; box-shadow: var(--menu-active-shadow) !important; }
+        .arrow { font-size: 10px; transition: transform 0.3s ease; display: inline-block; }
+        .has-submenu.open .arrow { transform: rotate(180deg); }
+        .submenu { list-style: none; display: none; flex-direction: column; gap: 5px; padding-left: 20px; margin-top: 5px;}
+        .has-submenu.open .submenu { display: flex; animation: slideDown 0.3s ease; }
+        .sub-item { padding: 10px 15px; font-size: 13px; }
+
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* ======== MAIN CONTENT ======== */
+        .main-content { flex: 1; padding: 10px 20px; display: flex; flex-direction: column; overflow-y: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        
+        .header-title h1 { font-size: 50px; font-weight: 700; color: var(--text-dark); letter-spacing: -1.5px; line-height: 1.2; }
+        .header-title p { display: none; }
+        
+        .header-actions { display: flex; align-items: center; gap: 20px; }
+        
+        .theme-toggle { background-color: var(--white); color: var(--text-dark); border: 1px solid var(--border-color); width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 20px; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 10px var(--shadow-color); transition: 0.3s; }
+        .theme-toggle:hover { transform: scale(1.1); }
+        .avatar { width: 40px; height: 40px; border-radius: 50%; background-color: #ffffff; background-image: url('https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png?20150327203541'); background-size: cover; cursor: pointer; transition: 0.2s; }
+        .avatar:hover { transform: scale(1.1); box-shadow: 0 0 10px rgba(0,0,0,0.1);}
+
+        /* ======== CÁC NÚT THAO TÁC ======== */
+        .action-btns { margin-bottom: 30px; display: flex; gap: 15px; align-items: center;}
+        
+        .btn-add { background-color: var(--btn-add-bg); color: var(--btn-add-text); padding: 14px 24px; border: none; border-radius: 12px; cursor: pointer; font-weight: 600; font-size: 14px; transition: 0.2s; }
+        .btn-add:hover { opacity: 0.8; transform: translateY(-2px); }
+
+        .btn-stat { background-color: #F59E0B; color: var(--white); padding: 14px 24px; border: none; border-radius: 12px; cursor: pointer; font-weight: 600; font-size: 14px; transition: 0.2s; }
+        .btn-stat:hover { background-color: #D97706; transform: translateY(-2px); }
+        .stat-result { font-weight: 700; font-size: 16px; color: #E11D48; margin-left: auto; background: #FFE4E6; padding: 10px 20px; border-radius: 12px; display: none; }
+
+        .btn-edit { background-color: var(--input-bg); color: var(--text-dark); border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer; font-weight: 600; transition: 0.2s; padding: 6px 12px; font-size: 12px; }
+        .btn-edit:hover { background-color: var(--border-color); }
+        .btn-delete { background-color: #FFE4E6; color: #E11D48; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: 0.2s; padding: 6px 12px; font-size: 12px; }
+        .btn-delete:hover { opacity: 0.8; }
+        .btn-inline-detail { background-color: #38BDF8; color: #FFFFFF; border: none; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.2s; margin-right: 5px;}
+        .btn-inline-detail:hover { opacity: 0.8; }
+
+        /* ======== BẢNG DỮ LIỆU ======== */
+        .table-container { background: var(--white); padding: 25px; border-radius: 20px; box-shadow: 0 0 15px rgba(210, 245, 101, 0.4); flex-grow: 1; overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 15px 10px; text-align: left; border-bottom: 1px solid var(--border-color); color: var(--text-dark); vertical-align: middle;}
+        
+        th { color: var(--text-gray); font-weight: 500; font-size: 14px; }
+        td { font-size: 14px; font-weight: 500; }
+        tr:hover td { background-color: var(--hover-bg); }
+        .new-invoice { border-top: 3px solid var(--border-color); } 
+
+        /* ======== MODALS ======== */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: var(--white); color: var(--text-dark); width: 400px; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px var(--shadow-color); border: 1px solid var(--border-color); }
+        .modal-content h2 { margin-bottom: 20px; font-size: 20px; }
+        .form-group { margin-bottom: 15px; text-align: left; }
+        .form-group label { display: block; font-size: 13px; color: var(--text-gray); margin-bottom: 5px; font-weight: 600;}
+        .form-group input, .form-group select { width: 100%; padding: 10px 15px; border-radius: 10px; border: 1px solid var(--border-color); background-color: var(--input-bg); color: var(--text-dark); outline: none; }
+        .form-group input:disabled { opacity: 0.5; cursor: not-allowed; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+        .btn-cancel { padding: 10px 20px; border-radius: 10px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-dark); cursor: pointer; font-weight: 600; }
+        .btn-cancel:hover { opacity: 0.8; }
+        .btn-save { padding: 10px 20px; border-radius: 10px; border: none; background: var(--accent-lime); color: #1E1E2D; cursor: pointer; font-weight: 600; }
+        .btn-save:hover { opacity: 0.8; }
+
+        /* Các modal cho bảng chi tiết / danh sách */
+        .modal-detail-content { background: var(--white); color: var(--text-dark); width: 850px; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px var(--shadow-color); border: 1px solid var(--border-color); max-height: 85vh; display: flex; flex-direction: column;}
+        .modal-detail-content .table-container { padding: 0; border-radius: 0; box-shadow: none; border: 1px solid var(--border-color); border-radius: 10px; overflow: auto; margin-bottom: 20px; flex-grow: 1; background: transparent;}
+        
+        #editChiTietModal, #addChiTietModal { z-index: 1001; }
+        #listModal { z-index: 1002; }
+    </style>
+</head>
+<body>
+
+    <div class="login-container" id="loginBox">
+        <button class="theme-toggle" onclick="toggleTheme()" style="position: absolute; top: 15px; right: 15px;">🌙</button>
+
+        <div class="login-logo">
+            <img src="LOGO.png" class="logo-img" alt="logo"> 
+            SyncMart
+        </div>
+        <p class="login-title">Đăng nhập để vào trang quản lý</p>
+        
+        <div class="input-group">
+            <input type="text" placeholder="Tên đăng nhập" id="txtUsername" name="username" autocomplete="username">
+        </div>
+        <div class="input-group">
+            <input type="password" placeholder="Mật khẩu" id="txtPassword" name="password" autocomplete="current-password">
+        </div>
+        
+        <button class="btn-login" onclick="vaoHeThong()">Đăng Nhập Ngay</button>
+    </div>
+
+    <div class="app-container" id="appBox">
+        <div class="sidebar">
+            <div class="logo">
+                <img src="LOGO.png" class="logo-img" alt="logo"> 
+                SyncMart
+            </div>
+            
+            <ul class="nav-menu">
+                <li class="menu-item active" onclick="showTab('khach_hang', this, event)">👤 Khách Hàng</li>
+                
+                <li class="has-submenu" id="menu-hanghoa">
+                    <div class="menu-title" onclick="showTab('hang_hoa', this, event); toggleSubmenu(this, event)">
+                        <span>📦 Hàng Hoá</span> <span class="arrow">▼</span>
+                    </div>
+                    <ul class="submenu">
+                        <li class="menu-item sub-item" onclick="showTab('sach', this, event)">📚 Sách</li>
+                        <li class="menu-item sub-item" onclick="showTab('vpp', this, event)">✂️ Văn Phòng Phẩm</li>
+                    </ul>
+                </li>
+
+                <li class="menu-item" onclick="showTab('nhan_vien', this, event)">🧑‍💼 Nhân Viên</li>
+                <li class="menu-item" onclick="showTab('tai_khoan', this, event)">🔐 Tài Khoản</li>
+                <li class="menu-item" onclick="showTab('nha_cung_cap', this, event)">🏢 Nhà Cung Cấp</li>
+                
+                <li class="has-submenu" id="menu-hoadon">
+                    <div class="menu-title" onclick="toggleSubmenu(this, event)">
+                        <span>📄 Hoá Đơn</span> <span class="arrow">▼</span>
+                    </div>
+                    <ul class="submenu">
+                        <li class="menu-item sub-item" onclick="showTab('hoa_don_ban', this, event)">📤 Hoá Đơn Bán</li>
+                        <li class="menu-item sub-item" onclick="showTab('hoa_don_nhap', this, event)">📥 Hoá Đơn Nhập</li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+
+        <div class="main-content">
+            <div class="header">
+                <div class="header-title">
+                    <h1 id="page-title">Danh Sách</h1>
+                </div>
+                <div class="header-actions">
+                    <button class="theme-toggle" onclick="toggleTheme()" id="btnThemeApp">🌙</button>
+                    <div class="avatar" onclick="dangXuat()" title="Bấm để đăng xuất"></div>
+                </div>
+            </div>
+
+            <div class="action-btns">
+                <button class="btn-add" onclick="moFormThem()">+ Thêm Mới Dữ Liệu</button>
+                <button class="btn-stat" id="btnThongKe" style="display: none;" onclick="tinhTongTien()">💰 Tính Tổng</button>
+                <div class="stat-result" id="txtThongKe"></div>
+            </div>
+
+            <div class="table-container">
+                <table id="data-table"></table>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="formModal">
+        <div class="modal-content">
+            <h2 id="modal-title">Thêm / Sửa Dữ Liệu</h2>
+            <div id="modal-body"></div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="document.getElementById('formModal').style.display='none'">Huỷ</button>
+                <button class="btn-save" onclick="luuDuLieu()">Lưu Lại</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="detailModal">
+        <div class="modal-detail-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 id="detail-title" style="margin-bottom: 0;">Chi Tiết Hoá Đơn</h2>
+                <button class="btn-add" onclick="moThemChiTiet()" style="padding: 8px 15px; font-size: 13px; border-radius: 8px;">+ Thêm Sản Phẩm Mới</button>
+            </div>
+            
+            <div class="table-container">
+                <table id="detail-table"></table>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="document.getElementById('detailModal').style.display='none'">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="editChiTietModal">
+        <div class="modal-content" style="width: 350px;">
+            <h2>Sửa Món Hàng: <span id="edit-ct-mahh" style="color:#38BDF8;"></span></h2>
+            <div class="form-group">
+                <label>Số Lượng Mới</label>
+                <input type="number" id="edit-ct-soluong" min="1">
+            </div>
+            <div class="form-group">
+                <label>Đơn Giá Mới (VNĐ)</label>
+                <input type="number" id="edit-ct-gia" min="0">
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="document.getElementById('editChiTietModal').style.display='none'">Huỷ</button>
+                <button class="btn-save" onclick="luuSuaChiTiet()">Cập Nhật</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="addChiTietModal">
+        <div class="modal-content" style="width: 350px;">
+            <h2>Thêm Món Hàng Mới</h2>
+            <div class="form-group">
+                <label>Chọn Hàng Hoá</label>
+                <select id="add-ct-mahh"></select>
+            </div>
+            <div class="form-group">
+                <label>Số Lượng</label>
+                <input type="number" id="add-ct-soluong" min="1" value="1">
+            </div>
+            <div class="form-group">
+                <label>Đơn Giá (VNĐ)</label>
+                <input type="number" id="add-ct-gia" min="0">
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="document.getElementById('addChiTietModal').style.display='none'">Huỷ</button>
+                <button class="btn-save" onclick="luuThemChiTiet()">Thêm Mới</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="listModal">
+        <div class="modal-detail-content" style="width: 850px;">
+            <h2 id="list-title" style="margin-bottom: 20px;">Danh Sách</h2>
+            <div class="table-container" style="max-height: 400px; overflow-y: auto;">
+                <table id="list-table"></table>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="document.getElementById('listModal').style.display='none'">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleTheme() {
+            const body = document.body;
+            body.classList.toggle('dark-theme');
+            
+            const toggles = document.querySelectorAll('.theme-toggle');
+            toggles.forEach(btn => {
+                if (body.classList.contains('dark-theme')) {
+                    btn.innerHTML = '☀️';
+                } else {
+                    btn.innerHTML = '🌙';
+                }
+            });
+        }
+
+        // ==========================================
+        // CẤU HÌNH SUPABASE
+        // ==========================================
+        const supabaseUrl = 'https://srxpkfysydksqtwovnfu.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNyeHBrZnlzeWRrc3F0d292bmZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0ODA1OTYsImV4cCI6MjA5MTA1NjU5Nn0.nOSxnPnGKaYiBGePh3mN5UmeIahNDkA-VZHgf96Rhac';
+        
+        const db = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        let configHienTai = null;      
+        let dongDangChon = null;       
+        let cheDoSua = false;          
+
+        // Cập nhật Tab Config bao gồm Tài Khoản
+        const tabConfigs = {
+            'khach_hang': { table: 'khach_hang', pk: 'ma_kh', title: 'Danh Sách Khách Hàng', headers: ['Mã KH', 'Tên Khách Hàng', 'SĐT', 'Địa Chỉ'], columns: ['ma_kh', 'ten_kh', 'sdt_kh', 'dia_chi_kh'] },
+            'hang_hoa': { table: 'hang_hoa', pk: 'ma_hh', title: 'Tất Cả Hàng Hoá Trong Kho', headers: ['Mã HH', 'Tên Hàng Hoá', 'Tồn Kho', 'Giá Gốc'], columns: ['ma_hh', 'ten_hh', 'ton_kho', 'gia_goc'] },
+            'sach': { table: 'sach', pk: 's_ma_hh', title: 'Quản Lý Danh Mục: Sách', selectQuery: '*, hang_hoa(ten_hh)', headers: ['Mã Sách', 'Tên Sách', 'Tác Giả', 'Thể Loại', 'Ngôn Ngữ'], columns: ['s_ma_hh', 'hang_hoa.ten_hh', 'tac_gia', 'the_loai', 'ngon_ngu'], formColumns: ['s_ma_hh', 'tac_gia', 'the_loai', 'ngon_ngu'] },
+            'vpp': { table: 'van_phong_pham', pk: 'vpp_ma_hh', title: 'Danh Mục: Văn Phòng Phẩm', selectQuery: '*, hang_hoa(ten_hh)', headers: ['Mã VPP', 'Tên VPP', 'Loại', 'Chất Liệu'], columns: ['vpp_ma_hh', 'hang_hoa.ten_hh', 'loai', 'chat_lieu'], formColumns: ['vpp_ma_hh', 'loai', 'chat_lieu'] },
+            'nhan_vien': { table: 'nhan_vien', pk: 'ma_nv', title: 'Danh Sách Nhân Viên', headers: ['Mã NV', 'Tên Nhân Viên', 'SĐT', 'Chức Vụ', 'Mã Quản Lý'], columns: ['ma_nv', 'ten_nv', 'sdt_nv', 'chuc_vu', 'ma_ql'] },
+            'tai_khoan': { table: 'tai_khoan', pk: 'ten_dang_nhap', title: 'Quản Lý Tài Khoản', headers: ['Tên Đăng Nhập', 'Mật Khẩu', 'Mã Nhân Viên', 'Vai Trò'], columns: ['ten_dang_nhap', 'mat_khau', 'ma_nv', 'vai_tro'] },
+            'nha_cung_cap': { table: 'nha_cung_cap', pk: 'ma_ncc', title: 'Danh Sách Nhà Cung Cấp', headers: ['Mã NCC', 'Tên Nhà Cung Cấp', 'SĐT', 'Email'], columns: ['ma_ncc', 'ten_ncc', 'sdt_ncc', 'email_ncc'] },
+            'hoa_don_ban': { table: 'hoa_don_ban', pk: 'ma_hdb', title: 'Danh Sách Hoá Đơn Bán', headers: ['Mã HĐ Bán', 'Tổng Tiền', 'Mã NV', 'Mã KH', 'Thời Gian Lập'], columns: ['ma_hdb', 't_tien_ban', 'ma_nv', 'ma_kh', 'thoi_gian_ban'] },
+            'hoa_don_nhap': { table: 'hoa_don_nhap', pk: 'ma_hdn', title: 'Danh Sách Hoá Đơn Nhập', headers: ['Mã HĐ Nhập', 'Tổng Tiền Nhập', 'Mã NV', 'Mã NCC', 'Thời Gian Lập'], columns: ['ma_hdn', 't_tien_nhap', 'ma_nv', 'ma_ncc', 'thoi_gian_nhap'] }
+        };
+
+        async function vaoHeThong() {
+            const user = document.getElementById('txtUsername').value.trim();
+            const pass = document.getElementById('txtPassword').value.trim();
+            if (!user || !pass) return alert("Nhập đủ thông tin!");
+
+            try {
+                const { data, error } = await db.from('tai_khoan').select('*').eq('ten_dang_nhap', user).eq('mat_khau', pass).single(); 
+                if (error || !data) return alert("Sai tài khoản hoặc mật khẩu!");
+                
+                document.getElementById('loginBox').style.display = 'none';
+                document.getElementById('appBox').style.display = 'flex';
+                
+                showTab('khach_hang', document.querySelector('.menu-item'));
+            } catch (error) { alert("Lỗi: " + error.message); }
+        }
+
+        function dangXuat() { location.reload(); }
+        
+        function toggleSubmenu(element, event) {
+            event.stopPropagation();
+            element.closest('.has-submenu').classList.toggle('open');
+        }
+
+        async function showTab(tabName, element, event) {
+            if(event) event.stopPropagation(); 
+            document.querySelectorAll('.menu-item, .menu-title').forEach(el => el.classList.remove('active'));
+            if(element) element.classList.add('active');
+            
+            dongDangChon = null; 
+            configHienTai = tabConfigs[tabName];
+            configHienTai.id = tabName; 
+            document.getElementById('page-title').innerText = configHienTai.title;
+            const table = document.getElementById('data-table');
+            table.innerHTML = '<tr><td style="text-align:center;">Đang tải...</td></tr>';
+
+            // --- HIỆN NÚT THỐNG KÊ KHI VÀO TAB HOÁ ĐƠN ---
+            const btnThongKe = document.getElementById('btnThongKe');
+            const txtThongKe = document.getElementById('txtThongKe');
+            txtThongKe.style.display = 'none'; 
+
+            if (tabName === 'hoa_don_ban') {
+                btnThongKe.style.display = 'inline-block';
+                btnThongKe.innerText = '💰 Tính Tổng Thu';
+            } else if (tabName === 'hoa_don_nhap') {
+                btnThongKe.style.display = 'inline-block';
+                btnThongKe.innerText = '💸 Tính Tổng Chi';
+            } else {
+                btnThongKe.style.display = 'none';
+            }
+
+            try {
+                const { data, error } = await db.from(configHienTai.table)
+                                                .select(configHienTai.selectQuery || '*')
+                                                .eq('da_xoa', false)
+                                                .order(configHienTai.pk, { ascending: true });
+                if (error) throw error;
+
+                // TIÊU ĐỀ BẢNG THƯỜNG
+                let html = '<thead><tr>';
+                configHienTai.headers.forEach(h => html += `<th>${h}</th>`);
+                html += '<th style="text-align: center; min-width: 250px;">Thao Tác</th>';
+                html += '</tr></thead><tbody>';
+                
+                data.forEach(row => {
+                    const rowDataStr = encodeURIComponent(JSON.stringify(row));
+                    html += `<tr>`;
+                    
+                    configHienTai.columns.forEach(col => {
+                        let val = row;
+                        if(col.includes('.')) {
+                            let parts = col.split('.');
+                            val = val[parts[0]] ? val[parts[0]][parts[1]] : '';
+                        } else {
+                            val = val[col];
+                        }
+                        
+                        let cellContent = val !== null && val !== undefined ? val : '';
+
+                        if ((configHienTai.table === 'hoa_don_ban' && col === 'thoi_gian_ban') || 
+                            (configHienTai.table === 'hoa_don_nhap' && col === 'thoi_gian_nhap')) {
+                            let maHD = row[configHienTai.pk];
+                            cellContent = `
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span>${cellContent}</span>
+                                    <button class="btn-inline-detail" onclick="xemChiTietHoaDon('${maHD}', event)">👁 Chi Tiết</button>
+                                </div>
+                            `;
+                        }
+                        if(col === 't_tien_ban' || col === 't_tien_nhap') {
+                            cellContent = Number(cellContent).toLocaleString('vi-VN') + " đ";
+                        }
+                        // Ẩn mật khẩu
+                        if(col === 'mat_khau') {
+                            cellContent = '••••••••';
+                        }
+
+                        html += `<td>${cellContent}</td>`;
+                    });
+
+                    // --- NÚT THAO TÁC MỞ RỘNG (Giao diện cũ kết hợp chức năng mới) ---
+                    let thaoTacExtra = '';
+                    if (configHienTai.table === 'khach_hang') {
+                        thaoTacExtra = `<button class="btn-inline-detail" style="background: #8B5CF6;" onclick="xemHoaDonKhachHang('${row.ma_kh}', event)">📦 HĐ Đã Mua</button> `;
+                    } else if (configHienTai.table === 'nhan_vien') {
+                        thaoTacExtra = `
+                            <button class="btn-inline-detail" style="background: #10B981;" onclick="xemHoaDonNhanVien('${row.ma_nv}', event)">📑 Lịch Sự HĐ</button> 
+                            <button class="btn-inline-detail" style="background: #F59E0B;" onclick="xemNhanVienCapDuoi('${row.ma_nv}', event)">👥 Cấp Dưới</button> `;
+                    }
+
+                    html += `
+                        <td style="text-align: center;">
+                            ${thaoTacExtra}
+                            <button class="btn-edit" onclick="moFormSua('${rowDataStr}', event)">Sửa</button>
+                            <button class="btn-delete" onclick="xoaDuLieu('${rowDataStr}', event)">Xoá</button>
+                        </td>
+                    `;
+                    html += '</tr>';
+                });
+                
+                if(data.length === 0) html += `<tr><td colspan="10" style="text-align:center;">Trống!</td></tr>`;
+                table.innerHTML = html + '</tbody>';
+            } catch (error) { alert("Lỗi tải dữ liệu: " + error.message); }
+        }
+
+        // ==========================================
+        // TÍNH NĂNG TÍNH TỔNG THU / CHI
+        // ==========================================
+        async function tinhTongTien() {
+            let isBan = configHienTai.table === 'hoa_don_ban';
+            let cotTien = isBan ? 't_tien_ban' : 't_tien_nhap';
+            let tenThongKe = isBan ? 'TỔNG DOANH THU' : 'TỔNG CHI PHÍ';
+
+            document.getElementById('txtThongKe').innerText = "Đang tính toán...";
+            document.getElementById('txtThongKe').style.display = 'inline-block';
+
+            try {
+                const { data, error } = await db.from(configHienTai.table)
+                                                .select(cotTien)
+                                                .eq('da_xoa', false);
+                if (error) throw error;
+
+                let tongTien = 0;
+                data.forEach(row => {
+                    tongTien += Number(row[cotTien]) || 0;
+                });
+
+                document.getElementById('txtThongKe').innerText = `${tenThongKe}: ${tongTien.toLocaleString('vi-VN')} VNĐ`;
+            } catch(error) {
+                document.getElementById('txtThongKe').style.display = 'none';
+                alert("Lỗi khi tính toán: " + error.message);
+            }
+        }
+
+        function moFormThem() {
+            if(!configHienTai) return;
+            cheDoSua = false;
+            document.getElementById('modal-title').innerText = "Thêm Mới " + configHienTai.title;
+            taoFormNhapLieu({}); 
+            document.getElementById('formModal').style.display = 'flex';
+        }
+
+        function moFormSua(rowDataStr, event) {
+            if(event) event.stopPropagation();
+            dongDangChon = JSON.parse(decodeURIComponent(rowDataStr));
+            cheDoSua = true;
+            document.getElementById('modal-title').innerText = "Chỉnh Sửa Dữ Liệu";
+            taoFormNhapLieu(dongDangChon); 
+            document.getElementById('formModal').style.display = 'flex';
+        }
+
+        function taoFormNhapLieu(dataHienTai) {
+            let html = '';
+            const cotNhapLieu = configHienTai.formColumns || configHienTai.columns;
+
+            cotNhapLieu.forEach((col) => {
+                let value = dataHienTai[col] !== undefined && dataHienTai[col] !== null ? dataHienTai[col] : '';
+                let khoaDuLieu = (cheDoSua && col === configHienTai.pk) ? 'disabled' : '';
+                
+                let headerIndex = configHienTai.columns.indexOf(col);
+                let tieuDe = configHienTai.headers[headerIndex];
+                let inputType = (col === 'mat_khau') ? 'text' : 'text'; 
+                
+                html += `
+                <div class="form-group">
+                    <label>${tieuDe} (${col})</label>
+                    <input type="${inputType}" id="input_${col}" value="${value}" ${khoaDuLieu}>
+                </div>`;
+            });
+            document.getElementById('modal-body').innerHTML = html;
+        }
+
+        async function luuDuLieu() {
+            let duLieuGuiDi = {};
+            const cotNhapLieu = configHienTai.formColumns || configHienTai.columns;
+            
+            cotNhapLieu.forEach(col => {
+                let val = document.getElementById('input_' + col).value.trim();
+                duLieuGuiDi[col] = val === '' ? null : val; 
+            });
+
+            try {
+                if (cheDoSua) {
+                    const pkValue = dongDangChon[configHienTai.pk];
+                    const { error } = await db.from(configHienTai.table).update(duLieuGuiDi).eq(configHienTai.pk, pkValue);
+                    if(error) throw error;
+                    alert("Cập nhật thành công!");
+                } else {
+                    const { error } = await db.from(configHienTai.table).insert([duLieuGuiDi]);
+                    if(error) throw error;
+                    alert("Thêm mới thành công!");
+                }
+                
+                document.getElementById('formModal').style.display = 'none';
+                showTab(configHienTai.id); 
+            } catch (error) { alert("Lỗi khi lưu: \n" + error.message); }
+        }
+
+        async function xoaDuLieu(rowDataStr, event) {
+            if(event) event.stopPropagation();
+            dongDangChon = JSON.parse(decodeURIComponent(rowDataStr));
+            
+            const pkValue = dongDangChon[configHienTai.pk];
+            
+            // Chống xóa tài khoản đang đăng nhập
+            const currentLoginUser = document.getElementById('txtUsername').value.trim();
+            if(configHienTai.table === 'tai_khoan' && pkValue === currentLoginUser) {
+                return alert("Lỗi: Bạn không thể tự xoá tài khoản đang đăng nhập của chính mình!");
+            }
+
+            if(confirm(`Bạn có chắc chắn muốn ẨN/XOÁ mã [${pkValue}] không?`)) {
+                try {
+                    const { error } = await db.from(configHienTai.table)
+                                            .update({ da_xoa: true }) 
+                                            .eq(configHienTai.pk, pkValue);
+                    if(error) throw error;
+                    
+                    alert("Đã xoá (ẩn) thành công!");
+                    dongDangChon = null; 
+                    showTab(configHienTai.id);
+                } catch (error) { alert("Lỗi hệ thống: " + error.message); }
+            }
+        }
+
+        // ==========================================
+        // QUẢN LÝ CHI TIẾT HOÁ ĐƠN & ĐỒNG BỘ TỒN KHO
+        // ==========================================
+        let thongTinHDHienTai = { maHD: null, laBangBan: true, bangCT: '', cotKhoaHD: '' };
+        let maHHSuaHienTai = null;
+        let slCuHienTai = 0; 
+        let dangXuLy = false; // Biến cờ ngăn chặn bấm liên tục
+
+        // HÀM MỚI: Tự động cập nhật tồn kho vào database
+        async function capNhatTonKho(maHH, soLuongThayDoi) {
+            try {
+                // 1. Lấy tồn kho hiện tại
+                const { data, error: errGet } = await db.from('hang_hoa').select('ton_kho').eq('ma_hh', maHH).single();
+                if (errGet) throw errGet;
+                
+                let tonKhoHienTai = Number(data.ton_kho) || 0;
+                let tonKhoMoi = tonKhoHienTai + soLuongThayDoi;
+
+                if (tonKhoMoi < 0) {
+                    alert(`⚠️ Cảnh báo: Tồn kho của mã [${maHH}] đang bị âm (${tonKhoMoi})!`);
+                }
+
+                // 2. Cập nhật lại tồn kho mới
+                const { error: errUpdate } = await db.from('hang_hoa').update({ ton_kho: tonKhoMoi }).eq('ma_hh', maHH);
+                if (errUpdate) throw errUpdate;
+            } catch (error) {
+                console.error("Lỗi đồng bộ tồn kho: ", error.message);
+            }
+        }
+
+        async function xemChiTietHoaDon(maHoaDon, event) {
+            if(event) event.stopPropagation(); 
+
+            let laBangBan = configHienTai.table === 'hoa_don_ban';
+            thongTinHDHienTai.maHD = maHoaDon;
+            thongTinHDHienTai.laBangBan = laBangBan;
+            thongTinHDHienTai.bangCT = laBangBan ? 'ct_hoa_don_ban' : 'ct_hoa_don_nhap';
+            thongTinHDHienTai.cotKhoaHD = laBangBan ? 'ma_hdb' : 'ma_hdn';
+
+            document.getElementById('detail-title').innerText = `Chi Tiết Hoá Đơn: ${maHoaDon}`;
+            document.getElementById('detailModal').style.display = 'flex';
+            document.getElementById('detail-table').innerHTML = '<tr><td style="text-align:center;">Đang tải chi tiết...</td></tr>';
+
+            try {
+                const { data, error } = await db.from(thongTinHDHienTai.bangCT)
+                                                .select('*, hang_hoa(ten_hh)')
+                                                .eq(thongTinHDHienTai.cotKhoaHD, maHoaDon);
+                if (error) throw error;
+
+                // BẢNG THƯỜNG
+                let html = `
+                    <thead>
+                        <tr>
+                            <th>Mã HH</th>
+                            <th>Tên Sản Phẩm</th>
+                            <th>Số Lượng</th>
+                            <th>Đơn Giá</th>
+                            <th>Thành Tiền</th>
+                            <th style="text-align: center;">Thao Tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                `;
+
+                let tongCong = 0;
+                data.forEach(item => {
+                    let gia = laBangBan ? item.gia_ban : item.gia_nhap;
+                    let thanhTien = item.so_luong * gia;
+                    tongCong += thanhTien;
+                    
+                    let tenHangHoa = item.hang_hoa ? item.hang_hoa.ten_hh : 'Sản phẩm không xác định';
+
+                    html += `
+                        <tr>
+                            <td style="font-weight: 600;">${item.ma_hh}</td>
+                            <td>${tenHangHoa}</td>
+                            <td>${item.so_luong}</td>
+                            <td>${gia.toLocaleString('vi-VN')} đ</td>
+                            <td style="color: #E11D48; font-weight: 600;">${thanhTien.toLocaleString('vi-VN')} đ</td>
+                            <td style="text-align: center;">
+                                <button class="btn-edit" onclick="moSuaChiTiet('${item.ma_hh}', ${item.so_luong}, ${gia})">Sửa</button>
+                                <button class="btn-delete" onclick="xoaMotChiTiet('${item.ma_hh}', ${item.so_luong})">Xoá</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                if (data.length === 0) {
+                    html += `<tr><td colspan=\"6\" style=\"text-align:center;\">Hoá đơn này hiện chưa có sản phẩm nào!</td></tr>`;
+                } else {
+                    html += `
+                        <tr style="background-color: var(--hover-bg);">
+                            <td colspan="4" style="text-align:right; font-weight:bold; font-size: 16px;">TỔNG CỘNG:</td>
+                            <td colspan="2" style="color: #E11D48; font-weight:bold; font-size: 16px;">${tongCong.toLocaleString('vi-VN')} đ</td>
+                        </tr>
+                    `;
+                }
+
+                document.getElementById('detail-table').innerHTML = html + '</tbody>';
+
+            } catch (error) { alert("Lỗi khi tải chi tiết: " + error.message); }
+        }
+
+        async function moThemChiTiet() {
+            try {
+                const { data, error } = await db.from('hang_hoa').select('ma_hh, ten_hh, gia_goc').eq('da_xoa', false);
+                if(error) throw error;
+                
+                let selectHtml = '<option value="">-- Chọn Sản Phẩm --</option>';
+                data.forEach(hh => {
+                    selectHtml += `<option value="${hh.ma_hh}" data-gia="${hh.gia_goc}">${hh.ma_hh} - ${hh.ten_hh}</option>`;
+                });
+                
+                let selectEl = document.getElementById('add-ct-mahh');
+                selectEl.innerHTML = selectHtml;
+                
+                document.getElementById('add-ct-soluong').value = 1;
+                document.getElementById('add-ct-gia').value = 0;
+
+                selectEl.onchange = function() {
+                    if(thongTinHDHienTai.laBangBan) {
+                        let optionDuocChon = this.options[this.selectedIndex];
+                        let giaGoc = optionDuocChon.getAttribute('data-gia');
+                        if (giaGoc) document.getElementById('add-ct-gia').value = giaGoc;
+                    }
+                };
+
+                document.getElementById('addChiTietModal').style.display = 'flex';
+            } catch(e) { alert("Lỗi tải danh sách hàng hoá: " + e.message); }
+        }
+
+        async function luuThemChiTiet() {
+            if (dangXuLy) return; // Chặn click liên tục
+            
+            let maHH = document.getElementById('add-ct-mahh').value;
+            let slMoi = parseInt(document.getElementById('add-ct-soluong').value);
+            let giaMoi = parseInt(document.getElementById('add-ct-gia').value);
+
+            if (!maHH) return alert("Vui lòng chọn một hàng hoá!");
+            if (isNaN(slMoi) || slMoi <= 0 || isNaN(giaMoi) || giaMoi < 0) {
+                return alert("Vui lòng nhập số lượng và đơn giá hợp lệ!");
+            }
+
+            dangXuLy = true; // Bật khóa chặn click
+
+            let duLieuMoi = { ma_hh: maHH, so_luong: slMoi };
+            duLieuMoi[thongTinHDHienTai.cotKhoaHD] = thongTinHDHienTai.maHD;
+            duLieuMoi[thongTinHDHienTai.laBangBan ? 'gia_ban' : 'gia_nhap'] = giaMoi;
+
+            try {
+                const { error } = await db.from(thongTinHDHienTai.bangCT).insert([duLieuMoi]);
+                if (error) {
+                    if(error.code === '23505') throw new Error("Sản phẩm này đã có trong hoá đơn! Vui lòng bấm 'Sửa' để tăng số lượng thay vì thêm mới.");
+                    throw error;
+                }
+                
+                // === CẬP NHẬT TỒN KHO ===
+                let heSo = thongTinHDHienTai.laBangBan ? -1 : 1; 
+                await capNhatTonKho(maHH, slMoi * heSo);
+
+                await capNhatTongTienHoatDon(thongTinHDHienTai.maHD);
+                document.getElementById('addChiTietModal').style.display = 'none';
+                xemChiTietHoaDon(thongTinHDHienTai.maHD); 
+                showTab(configHienTai.id); 
+            } catch (error) { 
+                alert("Lỗi khi thêm: " + error.message); 
+            } finally {
+                dangXuLy = false; // Mở khóa
+            }
+        }
+
+        function moSuaChiTiet(maHH, soLuongHienTai, giaHienTai) {
+            maHHSuaHienTai = maHH;
+            slCuHienTai = soLuongHienTai; 
+            document.getElementById('edit-ct-mahh').innerText = maHH;
+            document.getElementById('edit-ct-soluong').value = soLuongHienTai;
+            document.getElementById('edit-ct-gia').value = giaHienTai;
+            document.getElementById('editChiTietModal').style.display = 'flex';
+        }
+
+        async function luuSuaChiTiet() {
+            if (dangXuLy) return; // Nếu đang lưu thì chặn không cho chạy tiếp
+            
+            let slMoi = parseInt(document.getElementById('edit-ct-soluong').value);
+            let giaMoi = parseInt(document.getElementById('edit-ct-gia').value);
+
+            if (isNaN(slMoi) || slMoi <= 0 || isNaN(giaMoi) || giaMoi < 0) return alert("Số lượng và đơn giá phải là số hợp lệ!");
+
+            dangXuLy = true; // Bật khóa chặn click
+
+            let capNhatMoi = {};
+            capNhatMoi['so_luong'] = slMoi;
+            capNhatMoi[thongTinHDHienTai.laBangBan ? 'gia_ban' : 'gia_nhap'] = giaMoi;
+
+            try {
+                const { error } = await db.from(thongTinHDHienTai.bangCT).update(capNhatMoi).eq(thongTinHDHienTai.cotKhoaHD, thongTinHDHienTai.maHD).eq('ma_hh', maHHSuaHienTai);
+                if (error) throw error;
+
+                // === CẬP NHẬT TỒN KHO ===
+                let chenhLech = slMoi - slCuHienTai; 
+                let heSo = thongTinHDHienTai.laBangBan ? -1 : 1;
+                await capNhatTonKho(maHHSuaHienTai, chenhLech * heSo);
+
+                await capNhatTongTienHoatDon(thongTinHDHienTai.maHD);
+                document.getElementById('editChiTietModal').style.display = 'none';
+                xemChiTietHoaDon(thongTinHDHienTai.maHD); 
+                showTab(configHienTai.id); 
+            } catch (error) { 
+                alert("Lỗi khi cập nhật: " + error.message); 
+            } finally {
+                dangXuLy = false; // Mở khóa khi đã xử lý xong (dù thành công hay lỗi)
+            }
+        }
+
+        async function xoaMotChiTiet(maHH, soLuongDaXoa) {
+            if (dangXuLy) return; // Chặn click liên tục
+            
+            if(confirm(`Bạn có chắc muốn bỏ sản phẩm [${maHH}] ra khỏi hoá đơn này?`)) {
+                dangXuLy = true; // Bật khóa
+                try {
+                    const { error } = await db.from(thongTinHDHienTai.bangCT).delete().eq(thongTinHDHienTai.cotKhoaHD, thongTinHDHienTai.maHD).eq('ma_hh', maHH);
+                    if (error) throw error;
+                    
+                    // === HOÀN LẠI TỒN KHO ===
+                    let heSo = thongTinHDHienTai.laBangBan ? 1 : -1;
+                    await capNhatTonKho(maHH, soLuongDaXoa * heSo);
+
+                    await capNhatTongTienHoatDon(thongTinHDHienTai.maHD);
+                    xemChiTietHoaDon(thongTinHDHienTai.maHD);
+                    showTab(configHienTai.id);
+                } catch (error) { 
+                    alert("Lỗi khi xoá: " + error.message); 
+                } finally {
+                    dangXuLy = false; // Mở khóa
+                }
+            }
+        }
+
+        async function capNhatTongTienHoatDon(maHD) {
+            const { data, error } = await db.from(thongTinHDHienTai.bangCT).select('*').eq(thongTinHDHienTai.cotKhoaHD, maHD);
+            if (error) throw error;
+            let tongTienMoi = 0;
+            data.forEach(item => {
+                let gia = thongTinHDHienTai.laBangBan ? item.gia_ban : item.gia_nhap;
+                tongTienMoi += item.so_luong * gia;
+            });
+            let bangHDo = thongTinHDHienTai.laBangBan ? 'hoa_don_ban' : 'hoa_don_nhap';
+            let cotTongTien = thongTinHDHienTai.laBangBan ? 't_tien_ban' : 't_tien_nhap';
+            let updateTongTien = {};
+            updateTongTien[cotTongTien] = tongTienMoi;
+            await db.from(bangHDo).update(updateTongTien).eq(thongTinHDHienTai.cotKhoaHD, maHD);
+        }
+
+        // ==========================================
+        // CÁC HÀM XEM THÔNG TIN MỞ RỘNG
+        // ==========================================
+
+        async function xemHoaDonKhachHang(maKH, event) {
+            if(event) event.stopPropagation();
+            document.getElementById('list-title').innerText = `Lịch Sử Mua Hàng - Khách: ${maKH}`;
+            document.getElementById('listModal').style.display = 'flex';
+            document.getElementById('list-table').innerHTML = '<tr><td style="text-align:center;">Đang tải dữ liệu...</td></tr>';
+
+            try {
+                const { data, error } = await db.from('hoa_don_ban').select('*').eq('ma_kh', maKH).eq('da_xoa', false);
+                if (error) throw error;
+
+                // BẢNG THƯỜNG
+                let html = `<thead><tr>
+                    <th>Mã HĐ</th>
+                    <th>Thời Gian Mua</th>
+                    <th>Mã NV Phục Vụ</th>
+                    <th>Tổng Tiền</th>
+                </tr></thead><tbody>`;
+                
+                if(data.length === 0) html += `<tr><td colspan="4" style="text-align:center;">Khách hàng này chưa có giao dịch nào!</td></tr>`;
+                
+                data.forEach(hd => {
+                    html += `<tr>
+                        <td style="font-weight: 600;">${hd.ma_hdb}</td>
+                        <td>${hd.thoi_gian_ban || 'N/A'}</td>
+                        <td>${hd.ma_nv || 'N/A'}</td>
+                        <td style="color:#E11D48; font-weight:600;">${Number(hd.t_tien_ban).toLocaleString('vi-VN')} đ</td>
+                    </tr>`;
+                });
+                document.getElementById('list-table').innerHTML = html + `</tbody>`;
+            } catch (error) { alert("Lỗi khi tải lịch sử khách hàng: " + error.message); }
+        }
+
+        async function xemHoaDonNhanVien(maNV, event) {
+            if(event) event.stopPropagation();
+            document.getElementById('list-title').innerText = `Hoá Đơn Đã Xử Lý - Nhân Viên: ${maNV}`;
+            document.getElementById('listModal').style.display = 'flex';
+            document.getElementById('list-table').innerHTML = '<tr><td style="text-align:center;">Đang tải dữ liệu...</td></tr>';
+
+            try {
+                const [banRes, nhapRes] = await Promise.all([
+                    db.from('hoa_don_ban').select('*').eq('ma_nv', maNV).eq('da_xoa', false),
+                    db.from('hoa_don_nhap').select('*').eq('ma_nv', maNV).eq('da_xoa', false)
+                ]);
+                
+                if (banRes.error) throw banRes.error;
+                if (nhapRes.error) throw nhapRes.error;
+
+                let html = `<thead><tr>
+                    <th>Mã HĐ</th>
+                    <th>Loại Giao Dịch</th>
+                    <th>Thời Gian</th>
+                    <th>Đối Tác</th>
+                    <th>Tổng Tiền</th>
+                </tr></thead><tbody>`;
+                let empty = true;
+
+                banRes.data.forEach(hd => {
+                    empty = false;
+                    html += `<tr>
+                        <td style="font-weight: 600;">${hd.ma_hdb}</td>
+                        <td><span style="background:#D1FAE5; color:#065F46; padding:4px 8px; border-radius:6px; font-size:12px; font-weight:600;">BÁN HÀNG</span></td>
+                        <td>${hd.thoi_gian_ban || 'N/A'}</td>
+                        <td>Khách: ${hd.ma_kh || 'N/A'}</td>
+                        <td style="color:#E11D48; font-weight:600;">${Number(hd.t_tien_ban).toLocaleString('vi-VN')} đ</td>
+                    </tr>`;
+                });
+
+                nhapRes.data.forEach(hd => {
+                    empty = false;
+                    html += `<tr>
+                        <td style="font-weight: 600;">${hd.ma_hdn}</td>
+                        <td><span style="background:#DBEAFE; color:#1E40AF; padding:4px 8px; border-radius:6px; font-size:12px; font-weight:600;">NHẬP KHO</span></td>
+                        <td>${hd.thoi_gian_nhap || 'N/A'}</td>
+                        <td>NCC: ${hd.ma_ncc || 'N/A'}</td>
+                        <td style="color:#E11D48; font-weight:600;">${Number(hd.t_tien_nhap).toLocaleString('vi-VN')} đ</td>
+                    </tr>`;
+                });
+
+                if(empty) html += `<tr><td colspan="5" style="text-align:center;">Nhân viên này chưa xử lý hoá đơn nào!</td></tr>`;
+                
+                document.getElementById('list-table').innerHTML = html + `</tbody>`;
+            } catch (error) { alert("Lỗi khi tải hoá đơn nhân viên: " + error.message); }
+        }
+
+        async function xemNhanVienCapDuoi(maNV, event) {
+            if(event) event.stopPropagation();
+            document.getElementById('list-title').innerText = `Danh Sách Nhân Viên Cấp Dưới - Quản Lý: ${maNV}`;
+            document.getElementById('listModal').style.display = 'flex';
+            document.getElementById('list-table').innerHTML = '<tr><td style="text-align:center;">Đang tải dữ liệu...</td></tr>';
+
+            try {
+                const { data, error } = await db.from('nhan_vien').select('*').eq('ma_ql', maNV).eq('da_xoa', false);
+                if (error) throw error;
+
+                let html = `<thead><tr>
+                    <th>Mã NV</th>
+                    <th>Tên Nhân Viên</th>
+                    <th>Chức Vụ</th>
+                    <th>SĐT</th>
+                </tr></thead><tbody>`;
+                
+                if(data.length === 0) html += `<tr><td colspan="4" style="text-align:center;">Nhân viên này hiện không quản lý ai!</td></tr>`;
+                
+                data.forEach(nv => {
+                    html += `<tr>
+                        <td style="font-weight: 600;">${nv.ma_nv}</td>
+                        <td>${nv.ten_nv}</td>
+                        <td>${nv.chuc_vu || 'N/A'}</td>
+                        <td>${nv.sdt_nv || 'N/A'}</td>
+                    </tr>`;
+                });
+                document.getElementById('list-table').innerHTML = html + `</tbody>`;
+            } catch (error) { alert("Lỗi khi tải danh sách cấp dưới: " + error.message); }
+        }
+    </script>
+</body>
+</html>
